@@ -6,7 +6,7 @@ from utils.games import list_recent_games, arena_leaderboard_snakes
 
 def collect():
     print("running collector")
-    for snake in arena_leaderboard_snakes():
+    for snake in list(arena_leaderboard_snakes())[:10]:
         print(snake.snake_name)
         for game in list_recent_games(snake):
             print(game.game_url)
