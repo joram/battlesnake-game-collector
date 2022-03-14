@@ -34,12 +34,15 @@ def arena_leaderboard_snakes(url="https://play.battlesnake.com/arena/global/") -
         )
 
 
-def list_recent_games(snake: Snake) -> Generator[Game, None, None]:
+def list_recent_won_games(snake: Snake) -> Generator[Game, None, None]:
     url = f"https://play.battlesnake.com/arena/details/{snake.snake_id}/"
     response = requests.get(url)
     data = response.json()
     for data in data["recent_games"]:
+        if data["result"] != "won":
+            continue
         yield get_game(
+            snake=snake,
             game_url=data["game_url"],
             point_change=data["point_change"],
             result=data["result"],
@@ -49,9 +52,10 @@ def list_recent_games(snake: Snake) -> Generator[Game, None, None]:
         )
 
 
-def _cache_dir(game_id, depth=3) -> str:
+def _cache_dir(snake: Snake, game_id, depth=3) -> str:
     dir_path = os.path.dirname(os.path.realpath(__file__))
     directory = os.path.join(dir_path, "../data/")
+    directory = os.path.join(directory, snake.snake_name.replace("/", "_"))
     for i in range(0, depth):
         char = game_id[0]
         game_id = game_id[1:]
@@ -59,9 +63,9 @@ def _cache_dir(game_id, depth=3) -> str:
     return directory
 
 
-def _get_cached_game(game_id: str) -> Optional[Game]:
+def _get_cached_game(snake: Snake, game_id: str) -> Optional[Game]:
     # directory exists
-    directory = _cache_dir(game_id)
+    directory = _cache_dir(snake, game_id)
 
     # cache hits
     filepath = os.path.join(directory, f"{game_id}.json")
@@ -92,11 +96,11 @@ def _get_game_frames(game_id: str) -> List[dict]:
     return frames
 
 
-def get_game(game_url:str, point_change:str, result:str, score_change:str, tier_change:str, turns:int):
+def get_game(snake: Snake, game_url:str, point_change:str, result:str, score_change:str, tier_change:str, turns:int):
     game_id = game_url.replace("/g/", "").replace("/", "")
 
     # cache hit
-    game = _get_cached_game(game_id)
+    game = _get_cached_game(snake, game_id)
     if game is not None:
         return game
 
@@ -114,7 +118,7 @@ def get_game(game_url:str, point_change:str, result:str, score_change:str, tier_
     )
 
     # populate cache
-    directory = _cache_dir(game_id)
+    directory = _cache_dir(snake, game_id)
     filepath = os.path.join(directory, f"{game_id}.json")
     os.makedirs(directory, exist_ok=True)
     with open(filepath, "w") as f:
